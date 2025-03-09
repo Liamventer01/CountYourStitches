@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crochet Counter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Crochet Counter</h1>
+
+        <div class="input-section">
+            <input type="number" id="stitches" min="1" placeholder="Stitches per row">
+            <button class="set-btn" onclick="setStitches()">✔ Set</button>
+        </div>
+
+        <div class="checkbox-container">
+            <input type="checkbox" id="autoIncrease">
+            <label for="autoIncrease">Auto-increase rows when completed</label>
+        </div>
+
+        <div class="counter-wrapper">
+            <div class="stitch-section">
+                <button id="stitchBtn" onclick="incrementStitch()">{{ stitch_count }} Stitches</button>
+                <button class="undo-btn" onclick="undoStitch()">Undo</button>
+            </div>
+
+            <div class="row-section">
+                <button id="rowBtn" onclick="incrementRow()">{{ row_count }} Rows</button>
+                <button class="reset-btn" onclick="resetRows()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="popout-btn" onclick="openPopout()">⤴</button>
+
+    <script>
+    function setStitches() {
+        fetch('/update_counts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'set_stitches_per_row', value: document.getElementById("stitches").value })
+        }).then(response => response.json()).then(updateUI);
+    }
+
+    function incrementStitch() {
+        fetch('/update_counts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'increment_stitch' })
+        }).then(response => response.json()).then(data => {
+            updateUI(data);
+
+            // Auto-increment row when stitches reach the limit
+            let stitchesPerRow = document.getElementById("stitches").value;
+            let autoIncrease = document.getElementById("autoIncrease").checked;
+            if (autoIncrease && data.stitch_count >= stitchesPerRow) {
+                incrementRow(); // Automatically increase the row
+            }
+        });
+    }
+
+    function undoStitch() {
+        fetch('/update_counts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'undo_stitch' })
+        }).then(response => response.json()).then(updateUI);
+    }
+
+    function incrementRow() {
+        fetch('/update_counts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'increment_row' })
+        }).then(response => response.json()).then(updateUI);
+    }
+
+    function resetRows() {
+        fetch('/update_counts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reset_rows' })
+        }).then(response => response.json()).then(updateUI);
+    }
+
+    function updateUI(data) {
+        document.getElementById("stitchBtn").innerText = data.stitch_count + " Stitches";
+        document.getElementById("rowBtn").innerText = data.row_count + " Rows";
+    }
+
+    function openPopout() {
+        window.open("/popout", "CrochetCounterPopout", "width=260,height=350,top=500,left=1200,resizable=yes");
+    }
+    document.getElementById("autoIncrease").addEventListener("change", function() {
+        fetch('/save_auto_increase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ auto_increase: this.checked })
+        });
+    });
+</script>
+
+</body>
+</html>
